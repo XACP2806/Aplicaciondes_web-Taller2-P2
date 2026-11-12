@@ -30,6 +30,9 @@ const fotos = [
   }
 ];
 
+// Contador independiente para no repetir IDs despues de eliminar fotos.
+let siguienteId = Math.max(...fotos.map((foto) => foto.id)) + 1;
+
 // Ruta GET para obtener todas las fotos
 app.get('/api/fotos', (req, res) => {
   res.json(fotos);
@@ -60,7 +63,7 @@ app.post('/api/fotos', (req, res) => {
   }
 
   const nueva = {
-    id: fotos.length + 1,
+    id: siguienteId++,
     titulo,
     descripcion,
     calificacion,
@@ -70,6 +73,45 @@ app.post('/api/fotos', (req, res) => {
   res.status(201).json(nueva);
 });
 
+
+app.patch('/api/fotos/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const foto = fotos.find((f) => f.id === id);
+
+  if (!foto) {
+    return res.status(404).json({ mensaje: `Foto ${id} no encontrada` });
+  }
+
+  const cambios = req.body;
+  if (!cambios || typeof cambios !== 'object' || Array.isArray(cambios)) {
+    return res.status(400).json({ mensaje: 'Envia un objeto JSON' });
+  }
+
+  if (Object.hasOwn(cambios, 'titulo') && !cambios.titulo) {
+    return res.status(400).json({ mensaje: 'El titulo es obligatorio' });
+  }
+
+  // Solo actualiza campos enviados; el ID no se puede modificar.
+  for (const campo of ['titulo', 'descripcion', 'calificacion']) {
+    if (Object.hasOwn(cambios, campo)) {
+      foto[campo] = cambios[campo];
+    }
+  }
+
+  res.json(foto);
+});
+
+app.delete('/api/fotos/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const indice = fotos.findIndex((f) => f.id === id);
+
+  if (indice === -1) {
+    return res.status(404).json({ mensaje: `Foto ${id} no encontrada` });
+  }
+
+  fotos.splice(indice, 1);
+  res.status(204).end();
+});
 
  // Express 5: el error de una función async
  // llega solo al middleware de errores
